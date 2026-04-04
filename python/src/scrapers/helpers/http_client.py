@@ -79,13 +79,13 @@ async def post_json(url: str, payload: dict, headers: dict | None = None) -> dic
     return {}
 
 
-async def fetch_with_curl(url: str, headers: dict | None = None) -> str:
+async def fetch_with_curl(url: str, headers: dict | None = None, verify: bool = True) -> str:
     merged_headers = {**DEFAULT_HEADERS, **(headers or {})}
     async with CurlSession(impersonate="chrome") as session:
         for attempt in range(MAX_RETRIES):
             try:
                 resp = await session.get(
-                    url, headers=merged_headers, timeout=REQUEST_TIMEOUT
+                    url, headers=merged_headers, timeout=REQUEST_TIMEOUT, verify=verify
                 )
                 resp.raise_for_status()
                 return resp.text
