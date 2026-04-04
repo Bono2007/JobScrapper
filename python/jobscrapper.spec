@@ -1,4 +1,18 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
+import sys
+from pathlib import Path
+
+# Sur Mac en CI, Playwright installe Chromium dans ~/Library/Caches/ms-playwright
+# On le bundle dans le binaire pour que l'app fonctionne sans installation supplémentaire.
+# Sur Windows, Edge est utilisé directement (toujours présent sur Win10/11).
+_playwright_browsers_datas = []
+if sys.platform == "darwin":
+    _ms_playwright = Path.home() / "Library" / "Caches" / "ms-playwright"
+    if _ms_playwright.exists():
+        _playwright_browsers_datas = [
+            (str(_ms_playwright), "ms-playwright"),
+        ]
 
 a = Analysis(
     ['src/api.py'],
@@ -6,6 +20,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ('src/db/schema.sql', 'src/db'),
+        *_playwright_browsers_datas,
     ],
     hiddenimports=[
         'src.scrapers.registry_loader',
@@ -33,7 +48,7 @@ a = Analysis(
         'uvicorn.lifespan.on',
     ],
     hookspath=[],
-    runtime_hooks=[],
+    runtime_hooks=['pyi_rthook_playwright.py'],
     excludes=[],
     noarchive=False,
 )

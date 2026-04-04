@@ -24,6 +24,11 @@ jobs:
           cd python
           uv sync --extra dev
 
+      - name: Install Playwright Chromium (Mac — bundled in app)
+        run: |
+          cd python
+          uv run playwright install chromium
+
       - name: Build Python binary (Mac)
         run: |
           cd python
@@ -68,6 +73,9 @@ jobs:
         run: |
           cd python
           uv sync --extra dev
+
+      # Windows : Edge est toujours présent sur Windows 10/11, pas besoin de bundler Chromium.
+      # Le scraper détecte automatiquement msedge.exe au runtime.
 
       - name: Build Python binary (Windows)
         run: |

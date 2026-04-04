@@ -1,4 +1,59 @@
+from __future__ import annotations
+
+import os
+import sys
+from pathlib import Path
+
 from playwright.async_api import async_playwright
+
+
+def _get_chromium_executable() -> str | None:
+    """
+    Returns a path to a usable Chromium-based browser executable.
+
+    Priority:
+    1. JOBSCRAPPER_BROWSER env var (override for power users)
+    2. Microsoft Edge (always present on Windows 10/11)
+    3. Google Chrome (macOS / Windows)
+    4. None → Playwright uses its own managed Chromium
+    """
+    override = os.environ.get("JOBSCRAPPER_BROWSER")
+    if override and Path(override).exists():
+        return override
+
+    if sys.platform == "win32":
+        candidates = [
+            r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        ]
+    elif sys.platform == "darwin":
+        candidates = [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+            "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        ]
+    else:
+        candidates = [
+            "/usr/bin/google-chrome",
+            "/usr/bin/chromium-browser",
+            "/usr/bin/chromium",
+        ]
+
+    for p in candidates:
+        if Path(p).exists():
+            return p
+
+    return None
+
+
+def _launch_kwargs() -> dict:
+    exe = _get_chromium_executable()
+    kwargs: dict = {"headless": True}
+    if exe:
+        kwargs["executable_path"] = exe
+    return kwargs
 
 
 async def fetch_with_playwright(
@@ -8,7 +63,7 @@ async def fetch_with_playwright(
     wait_until: str = "networkidle",
 ) -> str:
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(**_launch_kwargs())
         context = await browser.new_context(
             user_agent=(
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -34,7 +89,7 @@ async def fetch_json_with_playwright(
     collected: list[dict] = []
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(**_launch_kwargs())
         context = await browser.new_context(
             user_agent=(
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
