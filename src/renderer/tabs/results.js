@@ -42,7 +42,9 @@ export async function loadJobs() {
     currentJobs = await res.json()
     renderList()
     updateCount()
-    updateSidebarSites(currentJobs)
+    // Sidebar : toujours calculer depuis toutes les offres (sans filtre source)
+    const allRes = await fetch(`${window.__API_BASE__}/jobs`)
+    updateSidebarSites(await allRes.json())
   } catch (err) {
     console.error('[loadJobs]', err)
     const list = document.getElementById('r-list')
