@@ -1,3 +1,5 @@
+import { switchTab } from '../router.js'
+import { loadDetail } from './detail.js'
 import { escapeHtml } from '../utils/html.js'
 
 let currentJobs = []
@@ -83,8 +85,8 @@ function renderList() {
 
   list.querySelectorAll('.job-item').forEach(item => {
     item.addEventListener('click', () => {
-      const job = currentJobs.find(j => j.offer_id === item.dataset.id)
-      if (job?.url) window.api.openExternal(job.url)
+      loadDetail(item.dataset.id)
+      switchTab('detail')
     })
   })
 }

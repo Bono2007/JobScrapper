@@ -1,5 +1,6 @@
 import { initSearch } from './tabs/search.js'
 import { initResults, loadJobs } from './tabs/results.js'
+import { initDetail } from './tabs/detail.js'
 
 async function init() {
   const port = await window.api.getPort()
@@ -7,6 +8,7 @@ async function init() {
 
   initSearch()
   await initResults()
+  initDetail()
   setupSidebar()
   await loadJobs()
 }
