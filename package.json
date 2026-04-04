@@ -8,11 +8,12 @@
     "build": "esbuild src/renderer/index.js --bundle --outfile=dist/renderer.js --external:electron",
     "watch": "esbuild src/renderer/index.js --bundle --outfile=dist/renderer.js --external:electron --watch",
     "start": "npm run build && electron .",
-    "dev": "npm run watch & electron .",
+    "dev": "concurrently \"npm run watch\" \"electron .\"",
     "dist:mac": "npm run build && electron-builder --mac",
     "dist:win": "npm run build && electron-builder --win"
   },
   "devDependencies": {
+    "concurrently": "^8.2.0",
     "electron": "^28.0.0",
     "electron-builder": "^24.13.0",
     "esbuild": "^0.20.0"

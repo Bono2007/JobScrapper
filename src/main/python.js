@@ -28,35 +28,55 @@ async function waitForReady(port, timeout = 15000) {
 }
 
 async function startPython() {
-  const port = await findFreePort()
   const isDev = !require('electron').app.isPackaged
 
-  let cmd, args, cwd
+  let cmd, args, getCwd
 
   if (isDev) {
     cmd = 'uv'
-    args = ['run', 'uvicorn', 'src.api:app', '--host', '127.0.0.1', '--port', String(port), '--no-access-log']
-    cwd = path.join(__dirname, '../../python')
+    getCwd = () => path.join(__dirname, '../../python')
+    args = (port) => ['run', 'uvicorn', 'src.api:app', '--host', '127.0.0.1', '--port', String(port), '--no-access-log']
   } else {
     const binaryName = process.platform === 'win32' ? 'api.exe' : 'api'
     const binaryPath = path.join(process.resourcesPath, 'python-dist', binaryName)
     cmd = binaryPath
-    args = ['--host', '127.0.0.1', '--port', String(port)]
-    cwd = path.dirname(binaryPath)
+    getCwd = () => path.dirname(binaryPath)
+    args = (port) => ['--host', '127.0.0.1', '--port', String(port)]
   }
 
-  pythonProcess = spawn(cmd, args, {
-    cwd,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, PYTHONUNBUFFERED: '1' },
-  })
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const port = await findFreePort()
+    const cwd = getCwd()
 
-  pythonProcess.stdout.on('data', d => console.log('[Python]', d.toString().trim()))
-  pythonProcess.stderr.on('data', d => console.error('[Python]', d.toString().trim()))
-  pythonProcess.on('exit', code => console.log(`[Python] exit ${code}`))
+    pythonProcess = spawn(cmd, args(port), {
+      cwd,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, PYTHONUNBUFFERED: '1' },
+    })
 
-  await waitForReady(port)
-  return port
+    pythonProcess.stdout.on('data', d => console.log('[Python]', d.toString().trim()))
+    pythonProcess.stderr.on('data', d => console.error('[Python]', d.toString().trim()))
+    pythonProcess.on('exit', code => {
+      console.log(`[Python] exit ${code}`)
+      // Signaler le crash au renderer si inattendu
+      if (code !== 0 && code !== null) {
+        const { BrowserWindow } = require('electron')
+        const wins = BrowserWindow.getAllWindows()
+        wins.forEach(w => w.webContents.send('python-crashed', code))
+      }
+    })
+
+    try {
+      await waitForReady(port)
+      return port
+    } catch (err) {
+      console.warn(`[Python] tentative ${attempt + 1} échouée, nouveau port...`)
+      pythonProcess.kill()
+      pythonProcess = null
+    }
+  }
+
+  throw new Error('Impossible de démarrer le backend Python après 3 tentatives')
 }
 
 function stopPython() {

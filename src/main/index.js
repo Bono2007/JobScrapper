@@ -23,7 +23,10 @@ async function createWindow() {
     apiPort = await startPython()
   } catch (err) {
     console.error('Impossible de démarrer Python :', err)
-    mainWindow.loadURL(`data:text/html,<h2>Erreur : ${err.message}</h2>`)
+    const msg = app.isPackaged
+      ? 'Le backend ne peut pas démarrer. Réinstallez l\'application.'
+      : `Erreur (dev): ${err.message}`
+    mainWindow.loadURL(`data:text/html;charset=utf-8,<h2 style="font-family:sans-serif;padding:20px">${msg}</h2>`)
     return
   }
 
