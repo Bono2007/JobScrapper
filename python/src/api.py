@@ -1,6 +1,13 @@
+import asyncio
 import dataclasses
 import json
+import sys
 from collections.abc import AsyncGenerator
+
+# Playwright requires SelectorEventLoop on Windows (ProactorEventLoop is the default
+# in Python 3.12 on Windows and breaks Playwright's CDP protocol handling).
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 import structlog
 import uvicorn
@@ -69,11 +76,13 @@ async def search_progress(
     selected = scraper_names if scraper_names else None
 
     async def event_generator() -> AsyncGenerator[str, None]:
-        async for name, count in run_search_streaming(query, selected):
+        async for name, count, error in run_search_streaming(query, selected):
             if name == "__done__":
                 payload = json.dumps({"done": True, "total": count})
             else:
-                payload = json.dumps({"site": name, "count": count, "done": False})
+                payload = json.dumps(
+                    {"site": name, "count": count, "error": error, "done": False}
+                )
             yield f"data: {payload}\n\n"
 
     return StreamingResponse(

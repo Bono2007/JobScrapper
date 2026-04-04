@@ -15,16 +15,16 @@ async function findFreePort() {
   })
 }
 
-async function waitForReady(port, timeout = 15000) {
+async function waitForReady(port, timeout = 60000) {
   const deadline = Date.now() + timeout
   while (Date.now() < deadline) {
     try {
       const res = await fetch(`http://127.0.0.1:${port}/scrapers`)
       if (res.ok) return
     } catch {}
-    await new Promise(r => setTimeout(r, 300))
+    await new Promise(r => setTimeout(r, 500))
   }
-  throw new Error('Le backend Python ne répond pas après 15 secondes')
+  throw new Error('Le backend Python ne répond pas après 60 secondes')
 }
 
 async function startPython() {
