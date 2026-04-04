@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron')
+const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron')
 const path = require('path')
 const { startPython, stopPython } = require('./python')
 
@@ -50,3 +50,16 @@ app.on('activate', () => {
 
 ipcMain.handle('get-port', () => apiPort)
 ipcMain.handle('open-external', (_event, url) => shell.openExternal(url))
+
+ipcMain.handle('save-csv', async (_event, csvUrl) => {
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    defaultPath: 'offres_emploi.csv',
+    filters: [{ name: 'CSV', extensions: ['csv'] }],
+  })
+  if (canceled || !filePath) return { saved: false }
+
+  const res = await fetch(csvUrl)
+  const buffer = Buffer.from(await res.arrayBuffer())
+  require('fs').writeFileSync(filePath, buffer)
+  return { saved: true, filePath }
+})

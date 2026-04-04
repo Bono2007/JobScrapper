@@ -1,5 +1,5 @@
 import { openModal } from '../components/modal.js'
-import { switchTab } from '../index.js'
+import { switchTab } from '../router.js'
 import { loadJobs } from './results.js'
 
 const DEFAULT_EXCLUDE = 'Alternance, Stage'
@@ -49,16 +49,22 @@ export function initSearch() {
 }
 
 async function loadScrapers() {
-  const res = await fetch(`${window.__API_BASE__}/scrapers`)
-  const names = await res.json()
-  const container = document.getElementById('scrapers-container')
-  container.className = 'scrapers-grid'
-  container.innerHTML = names.map(name => `
-    <label class="scraper-cb">
-      <input type="checkbox" name="scraper" value="${name}" checked>
-      ${name}
-    </label>
-  `).join('')
+  try {
+    const res = await fetch(`${window.__API_BASE__}/scrapers`)
+    const names = await res.json()
+    const container = document.getElementById('scrapers-container')
+    container.className = 'scrapers-grid'
+    container.innerHTML = names.map(name => `
+      <label class="scraper-cb">
+        <input type="checkbox" name="scraper" value="${name}" checked>
+        ${name}
+      </label>
+    `).join('')
+  } catch (err) {
+    const container = document.getElementById('scrapers-container')
+    if (container) container.innerHTML = '<span style="color:#c00">Erreur de connexion au backend.</span>'
+    console.error('[loadScrapers]', err)
+  }
 }
 
 function toggleAll(checked) {

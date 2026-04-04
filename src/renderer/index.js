@@ -7,7 +7,7 @@ async function init() {
   window.__API_BASE__ = `http://127.0.0.1:${port}`
 
   initSearch()
-  initResults()
+  await initResults()  // await pour que loadSources() soit terminé
   initDetail()
   setupTabs()
 
@@ -25,10 +25,6 @@ function setupTabs() {
       document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active')
     })
   })
-}
-
-export function switchTab(name) {
-  document.querySelector(`.tab-btn[data-tab="${name}"]`).click()
 }
 
 init()

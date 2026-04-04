@@ -1,5 +1,6 @@
-import { switchTab } from '../index.js'
+import { switchTab } from '../router.js'
 import { loadJobs, labelStatus } from './results.js'
+import { escapeHtml } from '../utils/html.js'
 
 export function initDetail() {
   const panel = document.getElementById('tab-detail')
@@ -79,7 +80,3 @@ function renderDetail(panel, job) {
   })
 }
 
-function escapeHtml(str) {
-  if (!str) return ''
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}

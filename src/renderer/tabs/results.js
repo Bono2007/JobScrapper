@@ -1,9 +1,10 @@
-import { switchTab } from '../index.js'
+import { switchTab } from '../router.js'
 import { loadDetail } from './detail.js'
+import { escapeHtml } from '../utils/html.js'
 
 let currentJobs = []
 
-export function initResults() {
+export async function initResults() {
   const panel = document.getElementById('tab-results')
   panel.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
@@ -35,7 +36,7 @@ export function initResults() {
   document.getElementById('r-export').addEventListener('click', handleExport)
   document.getElementById('r-clear').addEventListener('click', handleClear)
 
-  loadSources()
+  await loadSources()  // await ici pour que les sources soient chargées avant loadJobs()
 }
 
 export async function loadJobs() {
@@ -44,10 +45,16 @@ export async function loadJobs() {
   const params = new URLSearchParams()
   if (status) params.set('status', status)
   if (source) params.set('source', source)
-  const res = await fetch(`${window.__API_BASE__}/jobs?${params}`)
-  currentJobs = await res.json()
-  renderList()
-  updateCount()
+  try {
+    const res = await fetch(`${window.__API_BASE__}/jobs?${params}`)
+    currentJobs = await res.json()
+    renderList()
+    updateCount()
+  } catch (err) {
+    console.error('[loadJobs]', err)
+    const list = document.getElementById('r-list')
+    if (list) list.innerHTML = '<li style="padding:20px;text-align:center;color:#c00">Erreur de connexion au backend.</li>'
+  }
 }
 
 function renderList() {
@@ -95,16 +102,20 @@ function updateCount() {
 }
 
 async function loadSources() {
-  const res = await fetch(`${window.__API_BASE__}/sources`)
-  const srcs = await res.json()
-  const select = document.getElementById('r-source')
-  if (!select) return
-  srcs.forEach(s => {
-    const opt = document.createElement('option')
-    opt.value = s
-    opt.textContent = s
-    select.appendChild(opt)
-  })
+  try {
+    const res = await fetch(`${window.__API_BASE__}/sources`)
+    const srcs = await res.json()
+    const select = document.getElementById('r-source')
+    if (!select) return
+    srcs.forEach(s => {
+      const opt = document.createElement('option')
+      opt.value = s
+      opt.textContent = s
+      select.appendChild(opt)
+    })
+  } catch (err) {
+    console.error('[loadSources]', err)
+  }
 }
 
 async function handleExport() {
@@ -114,7 +125,10 @@ async function handleExport() {
   if (status) params.set('status', status)
   if (source) params.set('source', source)
   const url = `${window.__API_BASE__}/export?${params}`
-  await window.api.openExternal(url)
+  const result = await window.api.saveCsv(url)
+  if (result.saved) {
+    alert(`Fichier sauvegardé : ${result.filePath}`)
+  }
 }
 
 async function handleClear() {
@@ -129,7 +143,3 @@ export function labelStatus(status) {
   return { new: 'Nouveau', seen: 'Vu', interested: 'Intéressé', rejected: 'Rejeté' }[status] || status
 }
 
-function escapeHtml(str) {
-  if (!str) return ''
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
