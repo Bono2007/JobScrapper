@@ -21,6 +21,9 @@
   "build": {
     "appId": "com.jobscrapper.app",
     "productName": "JobScrapper",
+    "directories": {
+      "output": "release"
+    },
     "files": [
       "src/main/**/*",
       "src/preload.js",

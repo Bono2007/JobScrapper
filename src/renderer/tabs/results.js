@@ -1,6 +1,18 @@
 import { escapeHtml } from '../utils/html.js'
 
 let currentJobs = []
+let _status = ''
+let _source = ''
+
+export function setFilters({ status = '', source = '' } = {}) {
+  _status = status
+  _source = source
+  loadJobs()
+}
+
+function isCorbeille() {
+  return _status === 'rejected'
+}
 
 export async function initResults() {
   const panel = document.getElementById('tab-results')
@@ -10,13 +22,6 @@ export async function initResults() {
     </div>
     <div class="filters">
       <input id="r-search" type="text" placeholder="Rechercher dans les offres…">
-      <select id="r-status">
-        <option value="">Tous les statuts</option>
-        <option value="new">Nouveau</option>
-        <option value="seen">Vu</option>
-        <option value="interested">Intéressé</option>
-        <option value="rejected">Rejeté</option>
-      </select>
       <select id="r-source">
         <option value="">Toutes les sources</option>
       </select>
@@ -25,24 +30,28 @@ export async function initResults() {
   `
 
   document.getElementById('r-search').addEventListener('input', () => renderList())
-  document.getElementById('r-status').addEventListener('change', () => loadJobs())
-  document.getElementById('r-source').addEventListener('change', () => loadJobs())
+  document.getElementById('r-source').addEventListener('change', (e) => {
+    _source = e.target.value
+    loadJobs()
+  })
 
   await loadSources()
 }
 
 export async function loadJobs() {
-  const status = document.getElementById('r-status')?.value || ''
-  const source = document.getElementById('r-source')?.value || ''
   const params = new URLSearchParams()
-  if (status) params.set('status', status)
-  if (source) params.set('source', source)
+  if (_status) params.set('status', _status)
+  if (_source) params.set('source', _source)
+
+  // Sync source select with current filter
+  const sourceSelect = document.getElementById('r-source')
+  if (sourceSelect) sourceSelect.value = _source
+
   try {
     const res = await fetch(`${window.__API_BASE__}/jobs?${params}`)
     currentJobs = await res.json()
     renderList()
     updateCount()
-    // Sidebar : toujours calculer depuis toutes les offres (sans filtre source)
     const allRes = await fetch(`${window.__API_BASE__}/jobs`)
     updateSidebarSites(await allRes.json())
   } catch (err) {
@@ -53,12 +62,12 @@ export async function loadJobs() {
 }
 
 function renderList() {
-  const statusFilter = document.getElementById('r-status')?.value || ''
   const query = document.getElementById('r-search')?.value.toLowerCase() || ''
-  // Exclure les rejetés sauf dans la vue Corbeille
-  const visible = statusFilter === 'rejected'
+
+  const visible = isCorbeille()
     ? currentJobs
     : currentJobs.filter(j => j.status !== 'rejected')
+
   const filtered = query
     ? visible.filter(j =>
         j.title.toLowerCase().includes(query) ||
@@ -74,6 +83,8 @@ function renderList() {
     list.innerHTML = '<li style="padding:20px;text-align:center;color:var(--text-muted);">Aucune offre</li>'
     return
   }
+
+  const corbeille = isCorbeille()
 
   list.innerHTML = filtered.map(job => `
     <li class="job-item" data-id="${job.offer_id}">
@@ -91,26 +102,26 @@ function renderList() {
           : `<p class="job-expand-nodesc">Pas de description disponible. <a class="job-expand-link" href="#" data-url="${escapeHtml(job.url)}">Voir l'offre ↗</a></p>`
         }
         <div class="job-expand-actions">
-          <button class="btn btn-secondary btn-sm action-interested" data-id="${job.offer_id}">Intéressé</button>
-          <button class="btn btn-secondary btn-sm action-reject" data-id="${job.offer_id}">Refuser</button>
-          <button class="btn btn-sm action-delete" data-id="${job.offer_id}" style="color:var(--red);border:1px solid var(--red);background:none;">Supprimer</button>
+          ${corbeille
+            ? `<button class="btn btn-secondary btn-sm action-restore" data-id="${job.offer_id}">Restaurer</button>
+               <button class="btn btn-sm action-delete-hard" data-id="${job.offer_id}" style="color:var(--red);border:1px solid var(--red);background:none;">Supprimer définitivement</button>`
+            : `<button class="btn btn-secondary btn-sm action-interested" data-id="${job.offer_id}">Intéressé</button>
+               <button class="btn btn-secondary btn-sm action-reject" data-id="${job.offer_id}">🗑 Refuser</button>`
+          }
         </div>
       </div>
     </li>
   `).join('')
 
   list.querySelectorAll('.job-item').forEach(item => {
-    // Toggle expand sur le summary
     item.querySelector('.job-item-summary').addEventListener('click', () => {
       const expanded = item.querySelector('.job-item-expanded')
       const isOpen = !expanded.classList.contains('hidden')
-      // Fermer tous les autres
       list.querySelectorAll('.job-item-expanded').forEach(e => e.classList.add('hidden'))
       list.querySelectorAll('.job-item').forEach(i => i.classList.remove('expanded'))
       if (!isOpen) {
         expanded.classList.remove('hidden')
         item.classList.add('expanded')
-        // Marquer comme vu
         const job = currentJobs.find(j => j.offer_id === item.dataset.id)
         if (job?.status === 'new') {
           fetch(`${window.__API_BASE__}/jobs/${item.dataset.id}/status?status=seen`, { method: 'PATCH' })
@@ -124,28 +135,32 @@ function renderList() {
       }
     })
 
-    // Lien "Voir l'offre"
     item.querySelector('.job-expand-link')?.addEventListener('click', (e) => {
       e.preventDefault()
       window.api.openExternal(e.target.dataset.url)
     })
 
-    // Intéressé
+    // Vue normale : Intéressé / Refuser (→ Corbeille)
     item.querySelector('.action-interested')?.addEventListener('click', async (e) => {
       e.stopPropagation()
       await fetch(`${window.__API_BASE__}/jobs/${e.target.dataset.id}/status?status=interested`, { method: 'PATCH' })
       await loadJobs()
     })
 
-    // Refuser
     item.querySelector('.action-reject')?.addEventListener('click', async (e) => {
       e.stopPropagation()
       await fetch(`${window.__API_BASE__}/jobs/${e.target.dataset.id}/status?status=rejected`, { method: 'PATCH' })
       await loadJobs()
     })
 
-    // Supprimer
-    item.querySelector('.action-delete')?.addEventListener('click', async (e) => {
+    // Vue Corbeille : Restaurer / Supprimer définitivement
+    item.querySelector('.action-restore')?.addEventListener('click', async (e) => {
+      e.stopPropagation()
+      await fetch(`${window.__API_BASE__}/jobs/${e.target.dataset.id}/status?status=new`, { method: 'PATCH' })
+      await loadJobs()
+    })
+
+    item.querySelector('.action-delete-hard')?.addEventListener('click', async (e) => {
       e.stopPropagation()
       if (!confirm('Supprimer définitivement cette offre ?')) return
       await fetch(`${window.__API_BASE__}/jobs/${e.target.dataset.id}`, { method: 'DELETE' })
@@ -165,48 +180,41 @@ function updateSidebarSites(jobs) {
   const container = document.getElementById('sidebar-sites')
   if (!container) return
 
-  // Compter par source
+  // Compter par source (hors rejetés)
   const counts = {}
-  jobs.forEach(j => {
+  jobs.filter(j => j.status !== 'rejected').forEach(j => {
     counts[j.source_site] = (counts[j.source_site] || 0) + 1
   })
 
-  // Générer les items par site
   const sites = Object.entries(counts).sort((a, b) => b[1] - a[1])
 
   if (sites.length === 0) {
     container.innerHTML = ''
-    return
+  } else {
+    container.innerHTML = sites.map(([site, count]) => `
+      <a class="nav-item nav-item-site" data-tab="results" data-source="${site}" href="#">
+        <span class="nav-icon">·</span>
+        <span class="nav-label">${escapeHtml(site)}</span>
+        <span class="nav-badge">${count}</span>
+      </a>
+    `).join('')
+
+    container.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault()
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'))
+        item.classList.add('active')
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'))
+        document.getElementById('tab-results').classList.add('active')
+        setFilters({ status: '', source: item.dataset.source })
+      })
+    })
   }
 
-  container.innerHTML = sites.map(([site, count]) => `
-    <a class="nav-item nav-item-site" data-tab="results" data-source="${site}" href="#">
-      <span class="nav-icon">·</span>
-      <span class="nav-label">${escapeHtml(site)}</span>
-      <span class="nav-badge">${count}</span>
-    </a>
-  `).join('')
-
-  // Compteur Corbeille
+  // Badge Corbeille
   const rejectedCount = jobs.filter(j => j.status === 'rejected').length
   const badgeRejected = document.getElementById('badge-rejected')
   if (badgeRejected) badgeRejected.textContent = rejectedCount > 0 ? rejectedCount : ''
-
-  // Re-attacher les event listeners pour les nouveaux items
-  container.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-      e.preventDefault()
-      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'))
-      item.classList.add('active')
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'))
-      document.getElementById('tab-results').classList.add('active')
-      const sourceSelect = document.getElementById('r-source')
-      if (sourceSelect) {
-        sourceSelect.value = item.dataset.source
-        loadJobs()
-      }
-    })
-  })
 }
 
 async function loadSources() {

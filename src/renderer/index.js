@@ -1,5 +1,5 @@
 import { initSearch } from './tabs/search.js'
-import { initResults, loadJobs } from './tabs/results.js'
+import { initResults, loadJobs, setFilters } from './tabs/results.js'
 
 async function init() {
   const port = await window.api.getPort()
@@ -30,11 +30,7 @@ function setupSidebar() {
       if (panel) panel.classList.add('active')
 
       if (tab === 'results') {
-        const sourceSelect = document.getElementById('r-source')
-        const statusSelect = document.getElementById('r-status')
-        if (sourceSelect) sourceSelect.value = source
-        if (statusSelect) statusSelect.value = status
-        loadJobs()
+        setFilters({ status, source })
       }
     })
   })
