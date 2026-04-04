@@ -4,27 +4,32 @@ import { escapeHtml } from '../utils/html.js'
 
 export function initDetail() {
   const panel = document.getElementById('tab-detail')
-  panel.innerHTML = '<p style="color:#6e6e73;padding:20px;">Sélectionner une offre dans les Résultats.</p>'
+  panel.innerHTML = '<p style="padding:28px;color:var(--text-muted);">Sélectionner une offre dans les Résultats.</p>'
 }
 
 export async function loadDetail(offerId) {
   const panel = document.getElementById('tab-detail')
-  panel.innerHTML = '<p style="color:#6e6e73;padding:20px;">Chargement…</p>'
+  panel.innerHTML = '<p style="padding:28px;color:var(--text-muted);">Chargement…</p>'
 
-  const res = await fetch(`${window.__API_BASE__}/jobs/${offerId}`)
-  if (!res.ok) {
-    panel.innerHTML = '<p style="color:#c00;padding:20px;">Offre introuvable.</p>'
-    return
+  try {
+    const res = await fetch(`${window.__API_BASE__}/jobs/${offerId}`)
+    if (!res.ok) {
+      panel.innerHTML = '<p style="padding:28px;color:var(--red);">Offre introuvable.</p>'
+      return
+    }
+    let job = await res.json()
+
+    // Marquer comme "vu" si statut encore "new"
+    if (job.status === 'new') {
+      await fetch(`${window.__API_BASE__}/jobs/${offerId}/status?status=seen`, { method: 'PATCH' })
+      job = { ...job, status: 'seen' }
+    }
+
+    renderDetail(panel, job)
+  } catch (err) {
+    console.error('[loadDetail]', err)
+    panel.innerHTML = `<p style="padding:28px;color:var(--red);">Erreur : ${escapeHtml(err.message)}</p>`
   }
-  let job = await res.json()
-
-  // Marquer comme "vu" si statut encore "new"
-  if (job.status === 'new') {
-    await fetch(`${window.__API_BASE__}/jobs/${offerId}/status?status=seen`, { method: 'PATCH' })
-    job = { ...job, status: 'seen' }
-  }
-
-  renderDetail(panel, job)
 }
 
 function renderDetail(panel, job) {
@@ -32,7 +37,7 @@ function renderDetail(panel, job) {
     <div style="max-width:800px;">
       <button class="btn btn-secondary btn-sm" id="d-back">← Retour aux résultats</button>
 
-      <div class="detail-header" style="margin-top:16px;">
+      <div class="detail-header" style="margin-top:20px;">
         <div class="detail-title">${escapeHtml(job.title)}</div>
         <div class="detail-company">${escapeHtml(job.company)}</div>
         <div class="detail-meta">
@@ -58,7 +63,7 @@ function renderDetail(panel, job) {
 
       ${job.description
         ? `<div class="detail-description">${escapeHtml(job.description)}</div>`
-        : '<p style="color:#6e6e73;font-style:italic;">Pas de description disponible.</p>'
+        : '<p style="color:var(--text-muted);font-style:italic;">Pas de description disponible.</p>'
       }
     </div>
   `
@@ -79,4 +84,3 @@ function renderDetail(panel, job) {
     })
   })
 }
-
