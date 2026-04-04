@@ -1,0 +1,45 @@
+{
+  "name": "jobscrapper",
+  "productName": "JobScrapper",
+  "version": "1.0.0",
+  "description": "Agrégateur d'offres d'emploi — application desktop",
+  "main": "src/main/index.js",
+  "scripts": {
+    "build": "esbuild src/renderer/index.js --bundle --outfile=dist/renderer.js --external:electron",
+    "watch": "esbuild src/renderer/index.js --bundle --outfile=dist/renderer.js --external:electron --watch",
+    "start": "npm run build && electron .",
+    "dev": "npm run watch & electron .",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:win": "npm run build && electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.13.0",
+    "esbuild": "^0.20.0"
+  },
+  "build": {
+    "appId": "com.jobscrapper.app",
+    "productName": "JobScrapper",
+    "files": [
+      "src/main/**/*",
+      "src/preload.js",
+      "src/renderer/index.html",
+      "dist/**/*",
+      "src/renderer/style.css"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/python-dist/${os}",
+        "to": "python-dist",
+        "filter": ["**/*"]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": ["dmg"]
+    },
+    "win": {
+      "target": ["nsis"]
+    }
+  }
+}
