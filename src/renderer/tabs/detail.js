@@ -33,12 +33,24 @@ export async function loadDetail(offerId) {
 }
 
 function renderDetail(panel, job) {
+  panel.scrollTop = 0  // scroll to top
+
+  const statusColors = {
+    new: 'badge-new',
+    seen: 'badge-seen',
+    interested: 'badge-interested',
+    rejected: 'badge-rejected'
+  }
+
   panel.innerHTML = `
     <div style="max-width:800px;">
-      <button class="btn btn-secondary btn-sm" id="d-back">← Retour aux résultats</button>
+      <button class="btn btn-secondary btn-sm" id="d-back">← Résultats</button>
 
       <div class="detail-header" style="margin-top:20px;">
-        <div class="detail-title">${escapeHtml(job.title)}</div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;">
+          <div class="detail-title" style="flex:1;">${escapeHtml(job.title)}</div>
+          <span class="badge ${statusColors[job.status] || 'badge-seen'}">${labelStatus(job.status)}</span>
+        </div>
         <div class="detail-company">${escapeHtml(job.company)}</div>
         <div class="detail-meta">
           <span>📍 ${escapeHtml(job.location)}</span>
@@ -52,35 +64,51 @@ function renderDetail(panel, job) {
       <div class="detail-actions">
         ${['new','seen','interested','rejected'].map(s => `
           <button class="btn ${job.status === s ? 'btn-primary' : 'btn-secondary'} btn-sm status-btn"
-                  data-status="${s}">
+                  data-status="${s}" ${job.status === s ? 'disabled' : ''}>
             ${labelStatus(s)}
           </button>
         `).join('')}
         <button class="btn btn-secondary btn-sm" id="d-open-url" style="margin-left:auto;">
-          Ouvrir dans le navigateur ↗
+          Voir l'offre ↗
         </button>
       </div>
 
       ${job.description
         ? `<div class="detail-description">${escapeHtml(job.description)}</div>`
-        : '<p style="color:var(--text-muted);font-style:italic;">Pas de description disponible.</p>'
+        : `<div style="padding:20px;border:1px solid var(--border);border-radius:var(--radius-lg);text-align:center;color:var(--text-muted);">
+            <p style="margin-bottom:12px;">Pas de description disponible pour cette offre.</p>
+            <button class="btn btn-secondary btn-sm" id="d-open-url-2">Voir l'offre complète sur ${escapeHtml(job.source_site)} ↗</button>
+           </div>`
       }
     </div>
   `
 
   document.getElementById('d-back').addEventListener('click', () => switchTab('results'))
 
-  document.getElementById('d-open-url').addEventListener('click', () => {
-    window.api.openExternal(job.url)
-  })
+  const openUrl = () => {
+    if (window.api?.openExternal) {
+      window.api.openExternal(job.url)
+    }
+  }
+  document.getElementById('d-open-url').addEventListener('click', openUrl)
+  document.getElementById('d-open-url-2')?.addEventListener('click', openUrl)
 
   panel.querySelectorAll('.status-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
+      if (btn.disabled) return
       const newStatus = btn.dataset.status
-      await fetch(`${window.__API_BASE__}/jobs/${job.offer_id}/status?status=${newStatus}`, { method: 'PATCH' })
-      job = { ...job, status: newStatus }
-      renderDetail(panel, job)
-      loadJobs()
+      // Disable all buttons during request
+      panel.querySelectorAll('.status-btn').forEach(b => { b.disabled = true })
+      try {
+        await fetch(`${window.__API_BASE__}/jobs/${job.offer_id}/status?status=${newStatus}`, { method: 'PATCH' })
+        job = { ...job, status: newStatus }
+        renderDetail(panel, job)
+        loadJobs()
+      } catch (err) {
+        console.error('[updateStatus]', err)
+        // Re-enable on error
+        panel.querySelectorAll('.status-btn').forEach(b => { b.disabled = false })
+      }
     })
   })
 }
