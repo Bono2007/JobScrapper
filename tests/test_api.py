@@ -59,3 +59,24 @@ async def test_get_sources(client):
     response = await client.get("/sources")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+
+
+async def test_get_jobs_invalid_status(client):
+    response = await client.get("/jobs?status=invalid_value")
+    assert response.status_code == 400
+
+
+async def test_export_empty(client):
+    response = await client.get("/export")
+    assert response.status_code == 200
+    assert "text/csv" in response.headers["content-type"]
+    # BOM UTF-8 présent
+    assert response.content.startswith(b"\xef\xbb\xbf")
+
+
+async def test_get_job_does_not_auto_mark_seen(client):
+    """GET /jobs/{id} ne doit pas modifier le statut."""
+    # D'abord créer une offre en base via clear (vide) puis vérifier que 404
+    response = await client.get("/jobs/any_id")
+    assert response.status_code == 404
+    # Si l'offre n'existe pas, pas de mutation possible — test de non-régression

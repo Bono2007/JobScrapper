@@ -1,3 +1,4 @@
+import dataclasses
 import json
 from collections.abc import AsyncGenerator
 
@@ -35,20 +36,9 @@ app.add_middleware(
 
 
 def _job_to_dict(job: JobOffer) -> dict:
-    return {
-        "offer_id": job.offer_id,
-        "title": job.title,
-        "company": job.company,
-        "location": job.location,
-        "url": job.url,
-        "source_site": job.source_site,
-        "salary": job.salary,
-        "contract_type": job.contract_type,
-        "description": job.description,
-        "published_date": job.published_date,
-        "scraped_at": job.scraped_at,
-        "status": job.status.value,
-    }
+    d = dataclasses.asdict(job)
+    d["status"] = job.status.value
+    return d
 
 
 @app.get("/scrapers")
@@ -98,7 +88,13 @@ def jobs_list(
     source: str | None = None,
     keywords: str | None = None,
 ) -> list[dict]:
-    status_filter = JobStatus(status) if status else None
+    if status:
+        try:
+            status_filter = JobStatus(status)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Statut invalide : {status}")
+    else:
+        status_filter = None
     jobs = get_all_jobs(
         status_filter=status_filter,
         source_filter=source,
@@ -112,8 +108,6 @@ def job_detail(offer_id: str) -> dict:
     job = get_job_by_id(offer_id)
     if not job:
         raise HTTPException(status_code=404, detail="Offre introuvable")
-    update_job_status(offer_id, JobStatus.SEEN)
-    job = get_job_by_id(offer_id)
     return _job_to_dict(job)
 
 
@@ -144,7 +138,13 @@ def export_csv(
     source: str | None = None,
     keywords: str | None = None,
 ) -> Response:
-    status_filter = JobStatus(status) if status else None
+    if status:
+        try:
+            status_filter = JobStatus(status)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Statut invalide : {status}")
+    else:
+        status_filter = None
     jobs = get_all_jobs(
         status_filter=status_filter,
         source_filter=source,
