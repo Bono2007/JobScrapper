@@ -74,19 +74,79 @@ function renderList() {
 
   list.innerHTML = filtered.map(job => `
     <li class="job-item" data-id="${job.offer_id}">
-      <div>
-        <div class="job-title">${escapeHtml(job.title)}</div>
-        <div class="job-meta">${escapeHtml(job.company)} — ${escapeHtml(job.location)}</div>
-        <div class="job-meta">${escapeHtml(job.source_site)}${job.published_date ? ' · ' + job.published_date : ''}</div>
+      <div class="job-item-summary">
+        <div class="job-item-info">
+          <div class="job-title">${escapeHtml(job.title)}</div>
+          <div class="job-meta">${escapeHtml(job.company)} — ${escapeHtml(job.location)}</div>
+          <div class="job-meta">${escapeHtml(job.source_site)}${job.published_date ? ' · ' + job.published_date : ''}</div>
+        </div>
+        <span class="badge badge-${job.status}">${labelStatus(job.status)}</span>
       </div>
-      <span class="badge badge-${job.status}">${labelStatus(job.status)}</span>
+      <div class="job-item-expanded hidden">
+        ${job.description
+          ? `<div class="job-expand-desc">${escapeHtml(job.description)}</div>`
+          : `<p class="job-expand-nodesc">Pas de description disponible. <a class="job-expand-link" href="#" data-url="${escapeHtml(job.url)}">Voir l'offre ↗</a></p>`
+        }
+        <div class="job-expand-actions">
+          <button class="btn btn-secondary btn-sm action-interested" data-id="${job.offer_id}">Intéressé</button>
+          <button class="btn btn-secondary btn-sm action-reject" data-id="${job.offer_id}">Refuser</button>
+          <button class="btn btn-sm action-delete" data-id="${job.offer_id}" style="color:var(--red);border:1px solid var(--red);background:none;">Supprimer</button>
+        </div>
+      </div>
     </li>
   `).join('')
 
   list.querySelectorAll('.job-item').forEach(item => {
-    item.addEventListener('click', () => {
-      loadDetail(item.dataset.id)
-      switchTab('detail')
+    // Toggle expand sur le summary
+    item.querySelector('.job-item-summary').addEventListener('click', () => {
+      const expanded = item.querySelector('.job-item-expanded')
+      const isOpen = !expanded.classList.contains('hidden')
+      // Fermer tous les autres
+      list.querySelectorAll('.job-item-expanded').forEach(e => e.classList.add('hidden'))
+      list.querySelectorAll('.job-item').forEach(i => i.classList.remove('expanded'))
+      if (!isOpen) {
+        expanded.classList.remove('hidden')
+        item.classList.add('expanded')
+        // Marquer comme vu
+        const job = currentJobs.find(j => j.offer_id === item.dataset.id)
+        if (job?.status === 'new') {
+          fetch(`${window.__API_BASE__}/jobs/${item.dataset.id}/status?status=seen`, { method: 'PATCH' })
+            .then(() => {
+              job.status = 'seen'
+              item.querySelector('.badge').className = 'badge badge-seen'
+              item.querySelector('.badge').textContent = labelStatus('seen')
+            })
+            .catch(console.error)
+        }
+      }
+    })
+
+    // Lien "Voir l'offre"
+    item.querySelector('.job-expand-link')?.addEventListener('click', (e) => {
+      e.preventDefault()
+      window.api.openExternal(e.target.dataset.url)
+    })
+
+    // Intéressé
+    item.querySelector('.action-interested')?.addEventListener('click', async (e) => {
+      e.stopPropagation()
+      await fetch(`${window.__API_BASE__}/jobs/${e.target.dataset.id}/status?status=interested`, { method: 'PATCH' })
+      await loadJobs()
+    })
+
+    // Refuser
+    item.querySelector('.action-reject')?.addEventListener('click', async (e) => {
+      e.stopPropagation()
+      await fetch(`${window.__API_BASE__}/jobs/${e.target.dataset.id}/status?status=rejected`, { method: 'PATCH' })
+      await loadJobs()
+    })
+
+    // Supprimer
+    item.querySelector('.action-delete')?.addEventListener('click', async (e) => {
+      e.stopPropagation()
+      if (!confirm('Supprimer définitivement cette offre ?')) return
+      await fetch(`${window.__API_BASE__}/jobs/${e.target.dataset.id}`, { method: 'DELETE' })
+      await loadJobs()
     })
   })
 }
@@ -123,6 +183,11 @@ function updateSidebarSites(jobs) {
       <span class="nav-badge">${count}</span>
     </a>
   `).join('')
+
+  // Compteur Corbeille
+  const rejectedCount = jobs.filter(j => j.status === 'rejected').length
+  const badgeRejected = document.getElementById('badge-rejected')
+  if (badgeRejected) badgeRejected.textContent = rejectedCount > 0 ? rejectedCount : ''
 
   // Re-attacher les event listeners pour les nouveaux items
   container.querySelectorAll('.nav-item').forEach(item => {

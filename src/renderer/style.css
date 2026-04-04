@@ -563,4 +563,61 @@ body {
 /* === SCROLLBARS === */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* === CARDS EXPANDABLES === */
+.job-item {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.job-item-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  cursor: pointer;
+  width: 100%;
+}
+
+.job-item-info { flex: 1; }
+
+.job-item.expanded {
+  border-color: var(--accent);
+}
+
+.job-item-expanded {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.job-item-expanded.hidden { display: none; }
+
+.job-expand-desc {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  margin-bottom: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.job-expand-nodesc {
+  font-size: 12px;
+  color: var(--text-faint);
+  font-style: italic;
+  margin-bottom: 12px;
+}
+
+.job-expand-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+.job-expand-link:hover { text-decoration: underline; }
+
+.job-expand-actions {
+  display: flex;
+  gap: 8px;
+}
 ::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }

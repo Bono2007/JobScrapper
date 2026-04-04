@@ -111,6 +111,13 @@ def job_detail(offer_id: str) -> dict:
     return _job_to_dict(job)
 
 
+@app.delete("/jobs/{offer_id}")
+def delete_job_endpoint(offer_id: str) -> dict:
+    if not delete_job(offer_id):
+        raise HTTPException(status_code=404, detail="Offre introuvable")
+    return {"deleted": offer_id}
+
+
 @app.patch("/jobs/{offer_id}/status")
 def update_status(offer_id: str, status: str = Query(...)) -> dict:
     try:

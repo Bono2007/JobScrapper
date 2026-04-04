@@ -182,3 +182,13 @@ def count_jobs_by_status() -> dict[str, int]:
         return {row["status"]: row["cnt"] for row in rows}
     finally:
         conn.close()
+
+
+def delete_job(offer_id: str) -> bool:
+    conn = _ensure_db()
+    try:
+        cursor = conn.execute("DELETE FROM jobs WHERE offer_id = ?", (offer_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+    finally:
+        conn.close()

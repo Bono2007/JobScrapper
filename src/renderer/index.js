@@ -19,7 +19,8 @@ function setupSidebar() {
     item.addEventListener('click', (e) => {
       e.preventDefault()
       const tab = item.dataset.tab
-      const source = item.dataset.source ?? null
+      const source = item.dataset.source ?? ''
+      const status = item.dataset.status ?? ''
 
       // Activer le nav-item cliqué
       document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'))
@@ -30,13 +31,12 @@ function setupSidebar() {
       const panel = document.getElementById(`tab-${tab}`)
       if (panel) panel.classList.add('active')
 
-      // Si c'est un filtre par source dans les résultats, appliquer le filtre
-      if (tab === 'results' && source !== null) {
+      if (tab === 'results') {
         const sourceSelect = document.getElementById('r-source')
-        if (sourceSelect) {
-          sourceSelect.value = source
-          loadJobs()
-        }
+        const statusSelect = document.getElementById('r-status')
+        if (sourceSelect) sourceSelect.value = source
+        if (statusSelect) statusSelect.value = status
+        loadJobs()
       }
     })
   })
