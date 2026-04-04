@@ -1,4 +1,6 @@
-from urllib.parse import quote_plus
+import json as json_lib
+import urllib.request
+from urllib.parse import quote, quote_plus
 
 from bs4 import BeautifulSoup
 
@@ -14,6 +16,34 @@ from src.scrapers.registry import register_scraper
 # APEC API endpoint intercepted from browser network traffic
 _API_PATTERN = "rechercheOffre"
 _WAIT_SELECTOR = ".container-result"
+
+
+# Mapping of APEC numeric typeContrat IDs to readable labels
+async def _resolve_location_id(location: str) -> int | None:
+    """Retourne le lieuId APEC pour une ville donnée, ou None si introuvable."""
+    ac_url = (
+        "https://www.apec.fr/cms/webservices/autocompletion/lieuautocomplete"
+        f"?q={quote(location)}"
+        "&lieuTypeRecherche=FR_COMMUNE"
+        "&lieuTypeRecherche=FR_DEPARTEMENT"
+        "&lieuTypeRecherche=FR_REGION"
+    )
+    try:
+        req = urllib.request.Request(
+            ac_url,
+            headers={
+                "User-Agent": "Mozilla/5.0",
+                "Accept": "application/json",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json_lib.loads(resp.read())
+            if data:
+                return data[0]["lieuId"]
+    except Exception:
+        pass
+    return None
+
 
 # Mapping of APEC numeric typeContrat IDs to readable labels
 _CONTRACT_TYPE_LABELS: dict[int, str] = {
@@ -31,17 +61,23 @@ class ApecScraper(BaseScraper):
     name = "apec"
     base_url = "https://www.apec.fr"
 
-    def build_search_url(self, query: SearchQuery) -> str:
+    def build_search_url(self, query: SearchQuery, lieu_id: int | None = None) -> str:
         keywords = quote_plus(query.keywords)
-        location_encoded = quote_plus(query.location)
+        if lieu_id:
+            return (
+                f"{self.base_url}/candidat/recherche-emploi.html/emploi"
+                f"?motsCles={keywords}&lieux={lieu_id}&distance={query.radius_km}"
+            )
+        # Fallback sans localisation précise
         return (
-            f"{self.base_url}/candidat/recherche-emploi.html/emploi"
-            f"?motsCles={keywords}&lieuTravail={location_encoded}"
-            f"&typesContrats=101888&page=1"
+            f"{self.base_url}/candidat/recherche-emploi.html/emploi?motsCles={keywords}"
         )
 
     async def search(self, query: SearchQuery) -> list[JobOffer]:
-        url = self.build_search_url(query)
+        lieu_id = None
+        if query.location:
+            lieu_id = await _resolve_location_id(query.location)
+        url = self.build_search_url(query, lieu_id)
 
         # Primary: intercept the internal JSON API call made by the SPA
         api_calls = await fetch_json_with_playwright(
@@ -53,15 +89,13 @@ class ApecScraper(BaseScraper):
         for response in api_calls:
             resultats = response.get("resultats", [])
             if resultats:
-                jobs = self._parse_api_results(resultats)
-                return self._filter_by_location(jobs, query.location)
+                return self._parse_api_results(resultats)
 
         # Fallback: parse rendered HTML
         html = await fetch_with_playwright(
             url, wait_selector=_WAIT_SELECTOR, timeout=30000
         )
-        jobs = self._parse_html(html)
-        return self._filter_by_location(jobs, query.location)
+        return self._parse_html(html)
 
     def _filter_by_location(
         self, jobs: list[JobOffer], query_location: str
