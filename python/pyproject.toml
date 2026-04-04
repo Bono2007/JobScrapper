@@ -1,0 +1,29 @@
+[project]
+name = "jobscrapper-backend"
+version = "1.0.0"
+description = "Backend Python pour JobScrapper Electron"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx[http2]>=0.27",
+    "beautifulsoup4>=4.12",
+    "selectolax>=0.3",
+    "curl-cffi>=0.7",
+    "playwright>=1.40",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "thefuzz[speedup]>=0.22",
+    "structlog>=24.0",
+    "playwright-stealth>=2.0.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.27",
+    "pyinstaller>=6.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["../tests"]
