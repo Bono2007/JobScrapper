@@ -1,7 +1,7 @@
 {
   "name": "jobscrapper",
   "productName": "JobScrapper",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Agrégateur d'offres d'emploi — application desktop",
   "main": "src/main/index.js",
   "scripts": {
