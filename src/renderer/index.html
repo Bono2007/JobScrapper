@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy"
@@ -8,13 +8,49 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <nav id="tabs">
-    <button class="tab-btn active" data-tab="search">Recherche</button>
-    <button class="tab-btn" data-tab="results">Résultats <span id="results-count"></span></button>
-    <button class="tab-btn" data-tab="detail">Détail</button>
-  </nav>
+  <aside id="sidebar">
+    <div id="sidebar-header">
+      <div id="app-logo">
+        <span id="app-icon">🔍</span>
+        <span id="app-name">JobScrapper</span>
+      </div>
+      <button id="theme-toggle" title="Changer le thème">☀️</button>
+    </div>
 
-  <main>
+    <nav id="sidebar-nav">
+      <div class="nav-section">
+        <a class="nav-item active" data-tab="search" data-source="" href="#">
+          <span class="nav-icon">✦</span>
+          <span class="nav-label">Recherche</span>
+        </a>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-section-title">Résultats</div>
+        <a class="nav-item" data-tab="results" data-source="" href="#">
+          <span class="nav-icon">◈</span>
+          <span class="nav-label">Tous</span>
+          <span class="nav-badge" id="badge-all"></span>
+        </a>
+        <!-- Les sites seront injectés ici dynamiquement via JS -->
+        <div id="sidebar-sites"></div>
+      </div>
+
+      <div class="nav-section">
+        <a class="nav-item" data-tab="detail" data-source="" href="#">
+          <span class="nav-icon">◉</span>
+          <span class="nav-label">Détail</span>
+        </a>
+      </div>
+    </nav>
+
+    <div id="sidebar-footer">
+      <button class="btn-sidebar-action" id="sb-export">⬇ Exporter CSV</button>
+      <button class="btn-sidebar-action" id="sb-clear">🗑 Vider la base</button>
+    </div>
+  </aside>
+
+  <main id="main-content">
     <section id="tab-search" class="tab-panel active"></section>
     <section id="tab-results" class="tab-panel"></section>
     <section id="tab-detail" class="tab-panel"></section>
