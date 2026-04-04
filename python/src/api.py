@@ -11,6 +11,7 @@ from fastapi.responses import Response, StreamingResponse
 from src.db.repository import (
     clear_all_jobs,
     count_jobs_by_status,
+    delete_job,
     get_all_jobs,
     get_job_by_id,
     get_sources,
