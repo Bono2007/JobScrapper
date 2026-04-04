@@ -1,8 +1,18 @@
-// Entry point — sera complété dans Task 8
+import { initSearch } from './tabs/search.js'
+import { initResults, loadJobs } from './tabs/results.js'
+import { initDetail } from './tabs/detail.js'
+
 async function init() {
   const port = await window.api.getPort()
   window.__API_BASE__ = `http://127.0.0.1:${port}`
+
+  initSearch()
+  initResults()
+  initDetail()
   setupTabs()
+
+  // Charger les offres existantes en base au démarrage
+  await loadJobs()
 }
 
 function setupTabs() {
