@@ -193,23 +193,6 @@ SQLite (~/Library/Application Support/JobScrapper)
 
 ---
 
-## CI/CD
-
-Le workflow [`.github/workflows/release.yml`](.github/workflows/release.yml) se déclenche sur chaque tag `v*` :
-
-1. **build-mac** — runner `macos-latest` → compile le backend Python (PyInstaller arm64) + package Electron → `JobScrapper.dmg`
-2. **build-win** — runner `windows-latest` → compile le backend Python (PyInstaller x64) + package Electron → `JobScrapper Setup.exe`
-3. **create-release** — crée la GitHub Release et attache les deux artifacts
-
-Pour publier une nouvelle version :
-
-```bash
-git tag v1.2.3
-git push origin v1.2.3
-```
-
----
-
 ## Licence
 
 MIT — voir [LICENSE](LICENSE)
