@@ -11,7 +11,7 @@ export function initSearch() {
     <div style="max-width:600px;">
       <div class="form-group">
         <label>Mots-clés *</label>
-        <input id="s-keywords" type="text" placeholder="ex: développeur Python, CRM marketing" required>
+        <input id="s-keywords" type="text" placeholder="ex: CRM, CRM Manager, Data Analyst CRM" required>
       </div>
       <div class="form-group" style="display:flex;gap:12px;">
         <div style="flex:1;">
