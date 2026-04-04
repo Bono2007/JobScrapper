@@ -6,54 +6,6 @@ on:
       - 'v*'
 
 jobs:
-  build-mac:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh && echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Install Python deps + PyInstaller
-        run: |
-          cd python
-          uv sync --extra dev
-
-      - name: Install Playwright Chromium (Mac — bundled in app)
-        run: |
-          cd python
-          uv run playwright install chromium
-
-      - name: Build Python binary (Mac)
-        run: |
-          cd python
-          uv run pyinstaller jobscrapper.spec --distpath ../resources/python-dist/mac --workpath /tmp/pyinstaller-mac
-
-      - name: Setup Node 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Node deps
-        run: npm ci
-
-      - name: Build Electron (Mac)
-        run: npm run build && npx electron-builder --mac --publish never
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-
-      - name: Upload DMG
-        uses: actions/upload-artifact@v4
-        with:
-          name: JobScrapper-mac
-          path: release/*.dmg
-          if-no-files-found: error
-
   build-win:
     runs-on: windows-latest
     steps:
@@ -73,9 +25,6 @@ jobs:
         run: |
           cd python
           uv sync --extra dev
-
-      # Windows : Edge est toujours présent sur Windows 10/11, pas besoin de bundler Chromium.
-      # Le scraper détecte automatiquement msedge.exe au runtime.
 
       - name: Build Python binary (Windows)
         run: |
@@ -101,7 +50,7 @@ jobs:
           if-no-files-found: error
 
   create-release:
-    needs: [build-mac, build-win]
+    needs: [build-win]
     runs-on: ubuntu-latest
     permissions:
       contents: write
