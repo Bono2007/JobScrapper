@@ -1,5 +1,3 @@
-import json as json_lib
-import urllib.request
 from urllib.parse import quote, quote_plus
 
 from bs4 import BeautifulSoup
@@ -11,6 +9,7 @@ from src.scrapers.helpers.browser import (
     fetch_json_with_playwright,
     fetch_with_playwright,
 )
+from src.scrapers.helpers.http_client import fetch_json
 from src.scrapers.registry import register_scraper
 
 # APEC API endpoint intercepted from browser network traffic
@@ -18,7 +17,6 @@ _API_PATTERN = "rechercheOffre"
 _WAIT_SELECTOR = ".container-result"
 
 
-# Mapping of APEC numeric typeContrat IDs to readable labels
 async def _resolve_location_id(location: str) -> int | None:
     """Retourne le lieuId APEC pour une ville donnée, ou None si introuvable."""
     ac_url = (
@@ -29,17 +27,12 @@ async def _resolve_location_id(location: str) -> int | None:
         "&lieuTypeRecherche=FR_REGION"
     )
     try:
-        req = urllib.request.Request(
+        data = await fetch_json(
             ac_url,
-            headers={
-                "User-Agent": "Mozilla/5.0",
-                "Accept": "application/json",
-            },
+            headers={"Accept": "application/json"},
         )
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            data = json_lib.loads(resp.read())
-            if data:
-                return data[0]["lieuId"]
+        if isinstance(data, list) and data:
+            return data[0]["lieuId"]
     except Exception:
         pass
     return None
@@ -83,7 +76,7 @@ class ApecScraper(BaseScraper):
         api_calls = await fetch_json_with_playwright(
             url,
             api_pattern=_API_PATTERN,
-            timeout=30000,
+            timeout=20000,
         )
 
         for response in api_calls:
@@ -93,7 +86,7 @@ class ApecScraper(BaseScraper):
 
         # Fallback: parse rendered HTML
         html = await fetch_with_playwright(
-            url, wait_selector=_WAIT_SELECTOR, timeout=30000
+            url, wait_selector=_WAIT_SELECTOR, timeout=20000
         )
         return self._parse_html(html)
 

@@ -26,7 +26,7 @@ class LinkedInScraper(BaseScraper):
         html = await fetch_with_playwright(
             url,
             wait_selector=".jobs-search__results-list,.job-search-card",
-            timeout=30000,
+            timeout=20000,
         )
         return self._parse_listings(html)
 
