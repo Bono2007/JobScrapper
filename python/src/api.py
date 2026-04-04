@@ -1,8 +1,16 @@
 import asyncio
 import dataclasses
+import io
 import json
 import sys
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
+# Force UTF-8 on Windows stdout/stderr to avoid cp1252 UnicodeEncodeError
+# when scraper results contain accented characters or special symbols.
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 # Playwright requires SelectorEventLoop on Windows (ProactorEventLoop is the default
 # in Python 3.12 on Windows and breaks Playwright's CDP protocol handling).
@@ -14,6 +22,8 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
+
+from src.scrapers.helpers.browser_pool import close_pool, init_pool
 
 from src.db.repository import (
     clear_all_jobs,
@@ -33,7 +43,15 @@ from src.services.search_service import run_search_streaming
 
 logger = structlog.get_logger()
 
-app = FastAPI(title="JobScrapper API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_pool()
+    yield
+    await close_pool()
+
+
+app = FastAPI(title="JobScrapper API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

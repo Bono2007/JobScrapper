@@ -53,7 +53,7 @@ class FranceTravailScraper(BaseScraper):
             )
 
         html = await fetch_with_playwright(
-            url, wait_selector=_WAIT_SELECTOR, timeout=30000, wait_until="load"
+            url, wait_selector=_WAIT_SELECTOR, timeout=20000, wait_until="load"
         )
         return self._parse_listings(html)
 
