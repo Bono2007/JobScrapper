@@ -14,12 +14,12 @@ from src.scrapers.registry import register_scraper
 @register_scraper
 class MonsterScraper(BaseScraper):
     name = "monster"
-    base_url = "https://www.monster.fr"
+    base_url = "https://www.monster.com"
 
     def build_search_url(self, query: SearchQuery) -> str:
         q = quote_plus(query.keywords)
         l = quote_plus(query.location)
-        return f"{self.base_url}/emploi/recherche?q={q}&where={l}&page=1&so=m.h.s"
+        return f"{self.base_url}/jobs/search?q={q}&where={l}&lang=fr"
 
     async def search(self, query: SearchQuery) -> list[JobOffer]:
         url = self.build_search_url(query)

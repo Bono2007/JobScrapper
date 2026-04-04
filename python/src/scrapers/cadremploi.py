@@ -88,7 +88,7 @@ class CadremploiScraper(BaseScraper):
     async def search(self, query: SearchQuery) -> list[JobOffer]:
         url = self.build_search_url(query)
         html = await fetch_with_playwright(
-            url, wait_selector=_WAIT_SELECTOR, timeout=30000
+            url, wait_selector=_WAIT_SELECTOR, timeout=20000
         )
         return self._parse_listings(html)
 

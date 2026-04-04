@@ -9,11 +9,10 @@ from __future__ import annotations
 import json
 import unicodedata
 
-from playwright.async_api import async_playwright
-
 from src.models.job import JobOffer
 from src.models.search import SearchQuery
 from src.scrapers.base import BaseScraper
+from src.scrapers.helpers.browser_pool import acquire_context
 from src.scrapers.registry import register_scraper
 
 _BASE = "https://www.glassdoor.com"
@@ -91,9 +90,7 @@ class GlassdoorScraper(BaseScraper):
         return self._parse_listings(listings)
 
     async def _intercept_rsc(self, url: str) -> list[dict]:
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            ctx = await browser.new_context(locale="fr-FR", user_agent=_UA)
+        async with acquire_context(locale="fr-FR", user_agent=_UA) as ctx:
             page = await ctx.new_page()
 
             await page.add_init_script("""
@@ -106,8 +103,7 @@ class GlassdoorScraper(BaseScraper):
             """)
 
             try:
-                await page.goto(url, wait_until="load", timeout=30000)
-                await page.wait_for_timeout(2000)
+                await page.goto(url, wait_until="networkidle", timeout=20000)
             except Exception:
                 pass
 
@@ -121,7 +117,7 @@ class GlassdoorScraper(BaseScraper):
                 return item ? JSON.stringify(item) : null;
             }""")
 
-            await browser.close()
+            await page.close()
 
         if not raw:
             return []
