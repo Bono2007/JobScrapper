@@ -53,14 +53,19 @@ export async function loadJobs() {
 }
 
 function renderList() {
+  const statusFilter = document.getElementById('r-status')?.value || ''
   const query = document.getElementById('r-search')?.value.toLowerCase() || ''
+  // Exclure les rejetés sauf dans la vue Corbeille
+  const visible = statusFilter === 'rejected'
+    ? currentJobs
+    : currentJobs.filter(j => j.status !== 'rejected')
   const filtered = query
-    ? currentJobs.filter(j =>
+    ? visible.filter(j =>
         j.title.toLowerCase().includes(query) ||
         j.company.toLowerCase().includes(query) ||
         j.location.toLowerCase().includes(query)
       )
-    : currentJobs
+    : visible
 
   const list = document.getElementById('r-list')
   if (!list) return
