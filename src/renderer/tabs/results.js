@@ -1,5 +1,3 @@
-import { switchTab } from '../router.js'
-import { loadDetail } from './detail.js'
 import { escapeHtml } from '../utils/html.js'
 
 let currentJobs = []
