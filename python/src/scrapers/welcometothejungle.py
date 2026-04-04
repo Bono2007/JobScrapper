@@ -25,19 +25,26 @@ class WelcomeToTheJungleScraper(BaseScraper):
     def build_search_url(self, query: SearchQuery) -> str:
         q = quote_plus(query.keywords)
         loc = quote_plus(query.location)
-        return f"{self.base_url}/fr/jobs?query={q}&aroundQuery={loc}&aroundRadius={query.radius_km * 1000}&contractType[]=full_time"
+        return f"{self.base_url}/fr/jobs?query={q}&aroundQuery={loc}&aroundRadius={query.radius_km * 1000}"
 
     async def search(self, query: SearchQuery) -> list[JobOffer]:
         url = self.build_search_url(query)
         api_responses = await fetch_json_with_playwright(
-            url, api_pattern="algolia", timeout=25000
+            url, api_pattern="algolia", timeout=30000
         )
 
-        # Le 2e appel Algolia contient les résultats de jobs
         for response in api_responses:
+            # Format multi-index : {"results": [{"hits": [...]}]}
             results = response.get("results", [])
-            if results and results[0].get("hits"):
-                return self._parse_hits(results[0]["hits"], query.location)
+            if results:
+                for result in results:
+                    hits = result.get("hits", [])
+                    if hits:
+                        return self._parse_hits(hits)
+            # Format single-index : {"hits": [...]}
+            hits = response.get("hits", [])
+            if hits:
+                return self._parse_hits(hits)
 
         return []
 
@@ -46,7 +53,7 @@ class WelcomeToTheJungleScraper(BaseScraper):
         loc_l = query_location.lower().strip()
         return loc_l in city_l or city_l in loc_l
 
-    def _parse_hits(self, hits: list[dict], query_location: str = "") -> list[JobOffer]:
+    def _parse_hits(self, hits: list[dict]) -> list[JobOffer]:
         jobs: list[JobOffer] = []
 
         for hit in hits:
@@ -68,15 +75,7 @@ class WelcomeToTheJungleScraper(BaseScraper):
                 country = first.get("country", "")
                 location = f"{city}, {country}" if city else country
             else:
-                city = ""
                 location = "Non precise"
-
-            if (
-                query_location
-                and city
-                and not self._location_matches(city, query_location)
-            ):
-                continue
 
             raw_contract = hit.get("contract_type", "")
             contract = CONTRACT_MAP.get(raw_contract, raw_contract)
