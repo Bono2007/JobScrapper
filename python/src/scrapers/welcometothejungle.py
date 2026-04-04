@@ -30,7 +30,7 @@ class WelcomeToTheJungleScraper(BaseScraper):
     async def search(self, query: SearchQuery) -> list[JobOffer]:
         url = self.build_search_url(query)
         api_responses = await fetch_json_with_playwright(
-            url, api_pattern="algolia", timeout=30000
+            url, api_pattern="indexes/*/queries", timeout=30000
         )
 
         for response in api_responses:
