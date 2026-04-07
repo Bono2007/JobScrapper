@@ -14,6 +14,7 @@ a = Analysis(
         'src.scrapers.apec',
         'src.scrapers.cadremploi',
         'src.scrapers.francetravail',
+        'src.scrapers.freework',
         'src.scrapers.glassdoor',
         'src.scrapers.hellowork',
         'src.scrapers.indeed',

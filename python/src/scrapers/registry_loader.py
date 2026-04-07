@@ -4,6 +4,7 @@ from src.scrapers import (  # noqa: F401
     apec,
     cadremploi,
     francetravail,
+    freework,
     glassdoor,
     hellowork,
     indeed,
